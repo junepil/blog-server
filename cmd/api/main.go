@@ -2,27 +2,21 @@ package main
 
 import (
 	"blog-api/internal/api"
-	"blog-api/internal/config"
 	"blog-api/internal/database"
 	"log"
 	"net/http"
+	"github.com/joho/godotenv"
 )
 
 func main() {
-	cfg, err := config.LoadConfig(".")
+	err := godotenv.Load("app.env")
 	if err != nil {
-		log.Fatalf("could not load config: %v", err)
+		log.Fatal("Error loading .env file")
 	}
 
-	db, err := database.Connect(cfg)
-	if err != nil {
-		log.Fatalf("could not connect to db: %v", err)
-	}
-	defer db.Close()
+	database.Connect()
 
-	log.Println("database connected successfully")
-
-	router := api.NewRouter(db)
+	router := api.NewRouter(database.DB)
 	log.Println("starting server on :8080")
 	if err := http.ListenAndServe(":8080", router); err != nil {
 		log.Fatalf("could not start server: %v", err)

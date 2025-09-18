@@ -1,27 +1,34 @@
 package database
 
 import (
-	"database/sql"
+	"blog-api/internal/models"
 	"fmt"
+	"log"
+	"os"
 
-	"blog-api/internal/config"
-
-	_ "github.com/lib/pq"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
-func Connect(config config.Config) (*sql.DB, error) {
-	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-		config.DBHost, config.DBPort, config.DBUser, config.DBPassword, config.DBName, config.SSLMode)
+var DB *gorm.DB
 
-	db, err := sql.Open("postgres", dsn)
+func Connect() {
+	dsn := fmt.Sprintf("host=%s user=%s dbname=%s port=%s",
+		os.Getenv("DB_HOST"),
+		os.Getenv("DB_USER"),
+		os.Getenv("DB_NAME"),
+		os.Getenv("DB_PORT"),
+	)
+	var err error
+	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		return nil, err
+		log.Fatal("Failed to connect to database:", err)
 	}
 
-	err = db.Ping()
+	log.Println("Database connected successfully. Running migrations...")
+	err = DB.AutoMigrate(&models.Post{}, &models.Tag{}, &models.Comment{})
 	if err != nil {
-		return nil, err
+		log.Fatal("Failed to migrate database:", err)
 	}
-
-	return db, nil
+	log.Println("Database migrated successfully.")
 }
