@@ -15,21 +15,21 @@ func NewRouter(db *gorm.DB) http.Handler {
 	r.Use(chiMiddleware.Recoverer)
 	r.Use(middleware.RequestLogger)
 
+	authHandler := &handlers.AuthHandler{DB: db}
 	postHandler := &handlers.PostHandler{DB: db}
 	tagHandler := &handlers.TagHandler{DB: db}
 	commentHandler := &handlers.CommentHandler{DB: db}
 
+	// Public routes
+	r.Post("/login", authHandler.Login)
+
 	r.Route("/posts", func(r chi.Router) {
 		r.Get("/", postHandler.GetPosts)
-		r.Post("/", postHandler.CreatePost)
-		
+
 		r.Route("/{postID}", func(r chi.Router) {
 			r.Use(middleware.PostTrafficTracker(db))
 			r.Get("/", postHandler.GetPost)
 		})
-
-		r.Put("/{postID}", postHandler.UpdatePost)
-		r.Delete("/{postID}", postHandler.DeletePost)
 
 		r.Get("/{postID}/comments", commentHandler.GetComments)
 		r.Post("/{postID}/comments", commentHandler.CreateComment)
@@ -37,8 +37,18 @@ func NewRouter(db *gorm.DB) http.Handler {
 
 	r.Route("/tags", func(r chi.Router) {
 		r.Get("/", tagHandler.GetTags)
-		r.Post("/", tagHandler.CreateTag)
 		r.Get("/{tagName}/posts", tagHandler.GetPostsByTag)
+	})
+
+	// Protected routes
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.AuthMiddleware)
+
+		r.Post("/posts", postHandler.CreatePost)
+		r.Put("/posts/{postID}", postHandler.UpdatePost)
+		r.Delete("/posts/{postID}", postHandler.DeletePost)
+
+		r.Post("/tags", tagHandler.CreateTag)
 	})
 
 	return r
