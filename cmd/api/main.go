@@ -5,15 +5,9 @@ import (
 	"blog-api/internal/database"
 	"log"
 	"net/http"
-	"github.com/joho/godotenv"
 )
 
 func main() {
-	err := godotenv.Load("app.env")
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
-
 	database.Connect()
 
 	router := api.NewRouter(database.DB)
