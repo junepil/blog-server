@@ -2,17 +2,18 @@ package api
 
 import (
 	"blog-api/internal/api/handlers"
+	"blog-api/internal/api/middleware"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	"gorm.io/gorm"
 )
 
 func NewRouter(db *gorm.DB) http.Handler {
 	r := chi.NewRouter()
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
+	r.Use(chiMiddleware.Recoverer)
+	r.Use(middleware.RequestLogger)
 
 	postHandler := &handlers.PostHandler{DB: db}
 	tagHandler := &handlers.TagHandler{DB: db}
@@ -21,7 +22,12 @@ func NewRouter(db *gorm.DB) http.Handler {
 	r.Route("/posts", func(r chi.Router) {
 		r.Get("/", postHandler.GetPosts)
 		r.Post("/", postHandler.CreatePost)
-		r.Get("/{postID}", postHandler.GetPost)
+		
+		r.Route("/{postID}", func(r chi.Router) {
+			r.Use(middleware.PostTrafficTracker(db))
+			r.Get("/", postHandler.GetPost)
+		})
+
 		r.Put("/{postID}", postHandler.UpdatePost)
 		r.Delete("/{postID}", postHandler.DeletePost)
 
