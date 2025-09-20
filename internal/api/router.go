@@ -3,6 +3,7 @@ package api
 import (
 	"blog-api/internal/api/handlers"
 	"blog-api/internal/api/middleware"
+	"blog-api/internal/s3"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -10,7 +11,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func NewRouter(db *gorm.DB) http.Handler {
+func NewRouter(db *gorm.DB, uploader *s3.Uploader) http.Handler {
 	r := chi.NewRouter()
 	r.Use(chiMiddleware.Recoverer)
 	r.Use(middleware.RequestLogger)
@@ -19,6 +20,7 @@ func NewRouter(db *gorm.DB) http.Handler {
 	postHandler := &handlers.PostHandler{DB: db}
 	tagHandler := &handlers.TagHandler{DB: db}
 	commentHandler := &handlers.CommentHandler{DB: db}
+	imageHandler := &handlers.ImageHandler{Uploader: uploader}
 
 	// Public routes
 	r.Post("/login", authHandler.Login)
@@ -49,6 +51,9 @@ func NewRouter(db *gorm.DB) http.Handler {
 		r.Delete("/posts/{postID}", postHandler.DeletePost)
 
 		r.Post("/tags", tagHandler.CreateTag)
+
+		// Add the new protected image upload route
+		r.Post("/upload/image", imageHandler.UploadImage)
 	})
 
 	return r
